@@ -46,6 +46,6 @@ where
 {
     let date_time_string = String::deserialize(deserializer)?;
 
-    NaiveDateTime::parse_from_str(&date_time_string, "%Y-%m-%d %H-%M-%S %Z")
+    NaiveDateTime::parse_from_str(&date_time_string, "%Y-%m-%d %H:%M:%S %Z")
         .map_err(D::Error::custom)
 }
