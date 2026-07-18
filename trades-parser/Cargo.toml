@@ -5,10 +5,10 @@ edition = { workspace = true }
 
 [dependencies]
 chrono = { workspace = true }
-csv = "1.4.0"
+csv = { workspace = true }
 rust_decimal = { workspace = true }
 serde = { workspace = true }
-thiserror = "2.0.18"
+thiserror = { workspace = true }
 
 [lints]
 workspace = true

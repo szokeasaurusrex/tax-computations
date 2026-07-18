@@ -1,11 +1,11 @@
 [package]
 name = "trades-parser-cli"
-version.workspace = true
-edition.workspace = true
+version = { workspace = true }
+edition = { workspace = true }
 
 [dependencies]
-clap = { version = "4.6.2", features = ["derive"] }
-trades-parser = { version = "0.1.0", path = "../trades-parser" }
+clap = { workspace = true }
+trades-parser = { workspace = true }
 
 [lints]
 workspace = true
