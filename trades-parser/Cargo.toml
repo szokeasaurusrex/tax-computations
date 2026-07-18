@@ -1,0 +1,14 @@
+[package]
+name = "trades-parser"
+version = { workspace = true }
+edition = { workspace = true }
+
+[dependencies]
+chrono = { workspace = true }
+csv = "1.4.0"
+rust_decimal = { workspace = true }
+serde = { workspace = true }
+thiserror = "2.0.18"
+
+[lints]
+workspace = true
