@@ -6,6 +6,7 @@ edition = { workspace = true }
 [dependencies]
 clap = { workspace = true }
 trades-parser = { workspace = true }
+meldefonds-corrections-parser = { workspace = true }
 
 [lints]
 workspace = true
