@@ -263,6 +263,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "ecb-data-parser"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "csv",
+ "rust_decimal",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
 name = "equivalent"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
