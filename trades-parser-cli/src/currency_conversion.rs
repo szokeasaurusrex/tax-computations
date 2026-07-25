@@ -18,7 +18,7 @@ pub(crate) struct TradeEur {
 impl TradeEur {
     pub(crate) fn try_from_row(
         row: DetailedTradesRow,
-        conversions: RateTable,
+        conversions: &RateTable,
     ) -> Result<Self, RateNotFound> {
         let &DetailedTradesRow {
             proceeds: proceeds_usd,
