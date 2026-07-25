@@ -21,8 +21,11 @@ fn write_inputs(root: &Path, corrections: &str) {
     let fixtures = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures");
     let trades = root.join("trades");
     fs::create_dir_all(&trades).expect("create trade directory");
-    fs::copy(fixtures.join("fake-trades.csv"), trades.join("fake-trades.csv"))
-        .expect("copy fake trades");
+    fs::copy(
+        fixtures.join("fake-trades.csv"),
+        trades.join("fake-trades.csv"),
+    )
+    .expect("copy fake trades");
     fs::copy(fixtures.join("ecb.csv"), root.join("ecb.csv")).expect("copy fake ECB rates");
     fs::copy(fixtures.join(corrections), root.join("corrections.csv"))
         .expect("copy fake corrections");
@@ -81,11 +84,15 @@ fn assert_event(
     assert_eq!(value(record, headers, "symbol"), expected.symbol);
     assert_eq!(
         optional_decimal(record, headers, "quantity"),
-        expected.quantity.map(|value| Decimal::from_str(value).unwrap())
+        expected
+            .quantity
+            .map(|value| Decimal::from_str(value).unwrap())
     );
     assert_eq!(
         optional_decimal(record, headers, "proceeds"),
-        expected.proceeds.map(|value| Decimal::from_str(value).unwrap())
+        expected
+            .proceeds
+            .map(|value| Decimal::from_str(value).unwrap())
     );
     assert_eq!(
         optional_decimal(record, headers, "Proceeds (EUR)"),
@@ -121,12 +128,66 @@ fn calculates_fake_trades_and_weekend_rate() {
     let headers = reader.headers().unwrap().clone();
     let rows = reader.records().collect::<Result<Vec<_>, _>>().unwrap();
     let expected = [
-        EventExpectation { isin: "AT0000000001", symbol: "AAA", quantity: Some("10"), proceeds: Some("-1000"), proceeds_eur: Some("-500"), total_quantity: "10", total_basis_eur: "500", net_gain_eur: None },
-        EventExpectation { isin: "AT0000000001", symbol: "AAA", quantity: Some("5"), proceeds: Some("-600"), proceeds_eur: Some("-200"), total_quantity: "15", total_basis_eur: "700", net_gain_eur: None },
-        EventExpectation { isin: "AT0000000001", symbol: "AAA", quantity: Some("-6"), proceeds: Some("720"), proceeds_eur: Some("180"), total_quantity: "9", total_basis_eur: "420", net_gain_eur: Some("-100") },
-        EventExpectation { isin: "AT0000000002", symbol: "BBB", quantity: Some("2"), proceeds: Some("-200"), proceeds_eur: Some("-50"), total_quantity: "2", total_basis_eur: "50", net_gain_eur: None },
-        EventExpectation { isin: "AT0000000001", symbol: "", quantity: None, proceeds: None, proceeds_eur: None, total_quantity: "9", total_basis_eur: "447", net_gain_eur: None },
-        EventExpectation { isin: "AT0000000001", symbol: "AAA", quantity: Some("-9"), proceeds: Some("540"), proceeds_eur: Some("90"), total_quantity: "0", total_basis_eur: "0", net_gain_eur: Some("-357") },
+        EventExpectation {
+            isin: "AT0000000001",
+            symbol: "AAA",
+            quantity: Some("10"),
+            proceeds: Some("-1000"),
+            proceeds_eur: Some("-500"),
+            total_quantity: "10",
+            total_basis_eur: "500",
+            net_gain_eur: None,
+        },
+        EventExpectation {
+            isin: "AT0000000001",
+            symbol: "AAA",
+            quantity: Some("5"),
+            proceeds: Some("-600"),
+            proceeds_eur: Some("-200"),
+            total_quantity: "15",
+            total_basis_eur: "700",
+            net_gain_eur: None,
+        },
+        EventExpectation {
+            isin: "AT0000000001",
+            symbol: "AAA",
+            quantity: Some("-6"),
+            proceeds: Some("720"),
+            proceeds_eur: Some("180"),
+            total_quantity: "9",
+            total_basis_eur: "420",
+            net_gain_eur: Some("-100"),
+        },
+        EventExpectation {
+            isin: "AT0000000002",
+            symbol: "BBB",
+            quantity: Some("2"),
+            proceeds: Some("-200"),
+            proceeds_eur: Some("-50"),
+            total_quantity: "2",
+            total_basis_eur: "50",
+            net_gain_eur: None,
+        },
+        EventExpectation {
+            isin: "AT0000000001",
+            symbol: "",
+            quantity: None,
+            proceeds: None,
+            proceeds_eur: None,
+            total_quantity: "9",
+            total_basis_eur: "447",
+            net_gain_eur: None,
+        },
+        EventExpectation {
+            isin: "AT0000000001",
+            symbol: "AAA",
+            quantity: Some("-9"),
+            proceeds: Some("540"),
+            proceeds_eur: Some("90"),
+            total_quantity: "0",
+            total_basis_eur: "0",
+            net_gain_eur: Some("-357"),
+        },
     ];
     assert_eq!(rows.len(), expected.len());
     for (row, expected) in rows.iter().zip(expected.iter()) {
@@ -144,8 +205,14 @@ fn calculates_fake_trades_and_weekend_rate() {
     assert_eq!(decimal(&rows[0], &headers, "basis_eur"), Decimal::ZERO);
     assert_eq!(value(&rows[1], &headers, "isin"), "AT0000000002");
     assert_eq!(value(&rows[1], &headers, "symbol"), "BBB");
-    assert_eq!(decimal(&rows[1], &headers, "quantity"), Decimal::from_str("2").unwrap());
-    assert_eq!(decimal(&rows[1], &headers, "basis_eur"), Decimal::from_str("50").unwrap());
+    assert_eq!(
+        decimal(&rows[1], &headers, "quantity"),
+        Decimal::from_str("2").unwrap()
+    );
+    assert_eq!(
+        decimal(&rows[1], &headers, "basis_eur"),
+        Decimal::from_str("50").unwrap()
+    );
 
     fs::remove_dir_all(root).expect("remove temporary directory");
 }
@@ -155,6 +222,9 @@ fn rejects_correction_quantity_difference_over_tolerance() {
     let root = temp_directory("failure");
     write_inputs(&root, "corrections-invalid.csv");
     let output = run(&root);
-    assert!(!output.status.success(), "CLI unexpectedly succeeded: {output:?}");
+    assert!(
+        !output.status.success(),
+        "CLI unexpectedly succeeded: {output:?}"
+    );
     fs::remove_dir_all(root).expect("remove temporary directory");
 }
