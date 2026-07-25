@@ -814,6 +814,7 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "clap",
+ "corporate-actions-parser",
  "csv",
  "ecb-data-parser",
  "meldefonds-corrections-parser",

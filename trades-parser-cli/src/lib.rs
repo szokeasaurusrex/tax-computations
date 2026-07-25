@@ -113,7 +113,9 @@ pub fn run(
                     .rev()
                     .find_map(|event| match &event.transaction {
                         Transaction::Trade(trade) => Some(trade.original_trade.symbol.clone()),
-                        Transaction::MeldefondsCorrection(_) => None,
+                        Transaction::MeldefondsCorrection(_) | Transaction::CorporateAction(_) => {
+                            None
+                        }
                     });
 
                 Ok((

@@ -6,6 +6,7 @@ edition = { workspace = true }
 [dependencies]
 chrono.workspace = true
 clap = { workspace = true }
+corporate-actions-parser.workspace = true
 ecb-data-parser.workspace = true
 trades-parser = { workspace = true }
 meldefonds-corrections-parser = { workspace = true }

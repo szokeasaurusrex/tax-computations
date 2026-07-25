@@ -4,11 +4,11 @@ use chrono::NaiveDate;
 use csv::{Error as CsvError, ReaderBuilder};
 use rust_decimal::Decimal;
 use serde::de::Error as _;
-use serde::{Deserialize, Deserializer};
+use serde::{Deserialize, Deserializer, Serialize};
 use thiserror::Error;
 
 /// A corporate action that changes the number of held shares.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Serialize)]
 pub struct CorporateAction {
     pub isin: String,
     pub effective_date: NaiveDate,

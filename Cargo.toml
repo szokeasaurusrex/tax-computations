@@ -14,6 +14,7 @@ edition = "2024"
 [workspace.dependencies]
 chrono = { version = "0.4.45", features = ["serde"] }
 clap = { version = "4.6.2", features = ["derive"] }
+corporate-actions-parser = { version = "0.1.0", path = "corporate-actions-parser" }
 csv = "1.4.0"
 ecb-data-parser = { version = "0.1.0", path = "ecb-data-parser" }
 meldefonds-corrections-parser = { version = "0.1.0", path = "meldefonds-corrections-parser" }

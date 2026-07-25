@@ -84,6 +84,9 @@ impl Serialize for CalculatedTransaction {
                 net_gain_eur: self.net_gain_eur,
             }
             .serialize(serializer),
+            Transaction::CorporateAction(_) => unimplemented!(
+                "corporate action serialization is implemented in the calculation step"
+            ),
         }
     }
 }
@@ -152,6 +155,9 @@ pub(crate) fn calculate(
                         correction.shares_on_date_taxable * correction.correction_per_share_eur;
                     None
                 }
+                Transaction::CorporateAction(_) => unimplemented!(
+                    "corporate action calculation is implemented in the calculation step"
+                ),
             };
 
             Ok(CalculatedTransaction {
