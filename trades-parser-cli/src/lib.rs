@@ -83,6 +83,7 @@ pub(crate) fn load_transactions(
 
 mod calculation;
 mod currency_conversion;
+mod output;
 mod transaction;
 
 /// Split a list of transactions into a map keyed by their ISIN.

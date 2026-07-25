@@ -12,6 +12,7 @@ meldefonds-corrections-parser = { workspace = true }
 rust_decimal = { workspace = true }
 serde.workspace = true
 thiserror.workspace = true
+csv.workspace = true
 
 [lints]
 workspace = true

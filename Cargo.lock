@@ -803,6 +803,7 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "clap",
+ "csv",
  "ecb-data-parser",
  "meldefonds-corrections-parser",
  "rust_decimal",
