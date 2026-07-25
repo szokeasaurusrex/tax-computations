@@ -4,9 +4,14 @@ version = { workspace = true }
 edition = { workspace = true }
 
 [dependencies]
+chrono.workspace = true
 clap = { workspace = true }
+ecb-data-parser.workspace = true
 trades-parser = { workspace = true }
 meldefonds-corrections-parser = { workspace = true }
+rust_decimal = { workspace = true }
+serde.workspace = true
+thiserror.workspace = true
 
 [lints]
 workspace = true

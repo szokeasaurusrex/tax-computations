@@ -12,10 +12,11 @@ version = "0.1.0"
 edition = "2024"
 
 [workspace.dependencies]
-chrono = "0.4.45"
+chrono = { version = "0.4.45", features = ["serde"] }
 clap = { version = "4.6.2", features = ["derive"] }
 csv = "1.4.0"
-meldefonds-corrections-parser = { verion = "0.1.0", path = "meldefonds-corrections-parser" }
+ecb-data-parser = { version = "0.1.0", path = "ecb-data-parser" }
+meldefonds-corrections-parser = { version = "0.1.0", path = "meldefonds-corrections-parser" }
 rust_decimal = "1.42.1"
 serde = { version = "1.0.228", features = ["derive"] }
 thiserror = "2.0.18"

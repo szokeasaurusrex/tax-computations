@@ -10,6 +10,7 @@ use thiserror::Error;
 /// A Meldefonds correction for the taxable account.
 #[derive(Debug, PartialEq)]
 pub struct MeldefondsCorrection {
+    pub isin: String,
     pub report_date: NaiveDate,
     pub shares_on_date_taxable: Decimal,
     pub correction_per_share_eur: Decimal,
@@ -17,7 +18,7 @@ pub struct MeldefondsCorrection {
 
 /// Read Meldefonds corrections from a CSV file.
 ///
-/// Only the report date, taxable shares, and correction per share in EUR are
+/// The ISIN, report date, taxable shares, and correction per share in EUR are
 /// parsed. Other columns, including Roth shares, are ignored.
 ///
 /// # Errors
@@ -35,6 +36,7 @@ where
     Ok(reader.into_deserialize::<MeldefondsRow>().map(|result| {
         let row = result?;
         Ok(MeldefondsCorrection {
+            isin: row.isin,
             report_date: row.report_date,
             shares_on_date_taxable: row.shares_on_date_taxable,
             correction_per_share_eur: row.correction_per_share_eur,
@@ -44,6 +46,8 @@ where
 
 #[derive(Debug, Deserialize)]
 struct MeldefondsRow {
+    #[serde(rename = "ISIN")]
+    isin: String,
     #[serde(rename = "Report date", deserialize_with = "deserialize_date")]
     report_date: NaiveDate,
     #[serde(rename = "Shares on date (taxable)")]

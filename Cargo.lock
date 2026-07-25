@@ -185,6 +185,7 @@ dependencies = [
  "iana-time-zone",
  "js-sys",
  "num-traits",
+ "serde",
  "wasm-bindgen",
  "windows-link",
 ]
@@ -800,8 +801,13 @@ dependencies = [
 name = "trades-parser-cli"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "clap",
+ "ecb-data-parser",
  "meldefonds-corrections-parser",
+ "rust_decimal",
+ "serde",
+ "thiserror",
  "trades-parser",
 ]
 

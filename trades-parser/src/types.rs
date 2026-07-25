@@ -3,9 +3,9 @@
 use chrono::NaiveDateTime;
 use rust_decimal::Decimal;
 use serde::de::Error as _;
-use serde::{Deserialize, Deserializer};
+use serde::{Deserialize, Deserializer, Serialize};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "PascalCase")]
 #[non_exhaustive]
 pub struct DetailedTradesRow {
@@ -18,13 +18,12 @@ pub struct DetailedTradesRow {
     pub date_time: NaiveDateTime,
     pub quantity: Decimal,
     pub proceeds: Decimal,
-    pub cost_basis: Decimal,
     #[serde(rename = "Buy/Sell")]
     pub transaction_type: TransactionType,
 }
 
 /// The currency, only USD is supported now.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "UPPERCASE")]
 #[non_exhaustive]
 pub enum Currency {
@@ -32,7 +31,7 @@ pub enum Currency {
 }
 
 /// Whether this was a buy or sell transaction.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum TransactionType {
     Buy,
