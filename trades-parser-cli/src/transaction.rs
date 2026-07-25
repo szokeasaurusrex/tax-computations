@@ -2,6 +2,7 @@ use std::cmp::Ordering;
 
 use chrono::NaiveDate;
 use meldefonds_corrections_parser::MeldefondsCorrection;
+use serde::Serialize;
 use trades_parser::TransactionType;
 
 use crate::currency_conversion::TradeEur;
@@ -15,6 +16,7 @@ pub(crate) enum EventKind {
 }
 
 /// A transaction that may change the basis.
+#[derive(Debug, Serialize)]
 pub(crate) enum Transaction {
     Trade(TradeEur),
     MeldefondsCorrection(MeldefondsCorrection),

@@ -4,11 +4,11 @@ use chrono::NaiveDate;
 use csv::{Error as CsvError, ReaderBuilder};
 use rust_decimal::Decimal;
 use serde::de::Error as _;
-use serde::{Deserialize, Deserializer};
+use serde::{Deserialize, Deserializer, Serialize};
 use thiserror::Error;
 
 /// A Meldefonds correction for the taxable account.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Serialize)]
 pub struct MeldefondsCorrection {
     pub isin: String,
     pub report_date: NaiveDate,

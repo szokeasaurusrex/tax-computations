@@ -81,6 +81,7 @@ pub(crate) fn load_transactions(
     Ok(transactions)
 }
 
+mod calculation;
 mod currency_conversion;
 mod transaction;
 
