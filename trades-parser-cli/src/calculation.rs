@@ -40,6 +40,8 @@ impl Serialize for CalculatedTransaction {
             proceeds_eur: Option<Decimal>,
             #[serde(rename = "Report date")]
             report_date: Option<NaiveDate>,
+            #[serde(rename = "Corporate action date")]
+            corporate_action_date: Option<NaiveDate>,
             #[serde(rename = "Shares on date (taxable)")]
             correction_shares: Option<Decimal>,
             #[serde(rename = "Correction/share (EUR)")]
@@ -60,6 +62,7 @@ impl Serialize for CalculatedTransaction {
                 transaction_type: Some(&trade.original_trade.transaction_type),
                 proceeds_eur: Some(trade.proceeds_eur),
                 report_date: None,
+                corporate_action_date: None,
                 correction_shares: None,
                 correction_per_share_eur: None,
                 total_quantity: self.total_quantity,
@@ -77,6 +80,7 @@ impl Serialize for CalculatedTransaction {
                 transaction_type: None,
                 proceeds_eur: None,
                 report_date: Some(correction.report_date),
+                corporate_action_date: None,
                 correction_shares: Some(correction.shares_on_date_taxable),
                 correction_per_share_eur: Some(correction.correction_per_share_eur),
                 total_quantity: self.total_quantity,
@@ -84,9 +88,24 @@ impl Serialize for CalculatedTransaction {
                 net_gain_eur: self.net_gain_eur,
             }
             .serialize(serializer),
-            Transaction::CorporateAction(_) => unimplemented!(
-                "corporate action serialization is implemented in the calculation step"
-            ),
+            Transaction::CorporateAction(action) => Row {
+                currency: None,
+                symbol: None,
+                isin: &action.isin,
+                date_time: None,
+                quantity: Some(action.quantity),
+                proceeds: None,
+                transaction_type: None,
+                proceeds_eur: None,
+                report_date: None,
+                corporate_action_date: Some(action.effective_date),
+                correction_shares: None,
+                correction_per_share_eur: None,
+                total_quantity: self.total_quantity,
+                total_basis_eur: self.total_basis_eur,
+                net_gain_eur: None,
+            }
+            .serialize(serializer),
         }
     }
 }
@@ -155,9 +174,16 @@ pub(crate) fn calculate(
                         correction.shares_on_date_taxable * correction.correction_per_share_eur;
                     None
                 }
-                Transaction::CorporateAction(_) => unimplemented!(
-                    "corporate action calculation is implemented in the calculation step"
-                ),
+                Transaction::CorporateAction(action) => {
+                    if total_quantity == Decimal::ZERO {
+                        eprintln!(
+                            "warning: corporate action for {} on {} has no position; applying quantity change of {}",
+                            action.isin, action.effective_date, action.quantity
+                        );
+                    }
+                    total_quantity += action.quantity;
+                    None
+                }
             };
 
             Ok(CalculatedTransaction {
