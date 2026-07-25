@@ -1,14 +1,14 @@
+use chrono::{NaiveDate, NaiveDateTime};
 use rust_decimal::Decimal;
-use serde::Serialize;
+use serde::{Serialize, Serializer};
 use thiserror::Error;
 use trades_parser::TransactionType;
 
 use super::Transaction;
 
-#[derive(Serialize)]
+#[derive(Debug)]
 pub(crate) struct CalculatedTransaction {
     /// The transaction event.
-    #[serde(flatten)]
     pub(crate) transaction: Transaction,
     /// Remaining quantity after transaction.
     pub(crate) total_quantity: Decimal,
@@ -16,6 +16,76 @@ pub(crate) struct CalculatedTransaction {
     pub(crate) total_basis_eur: Decimal,
     /// For sales only: net realized gain in Euros.
     pub(crate) net_gain_eur: Option<Decimal>,
+}
+
+impl Serialize for CalculatedTransaction {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        #[derive(Serialize)]
+        struct Row<'a> {
+            #[serde(rename = "CurrencyPrimary")]
+            currency: Option<&'a trades_parser::Currency>,
+            symbol: Option<&'a str>,
+            #[serde(rename = "ISIN")]
+            isin: &'a str,
+            #[serde(rename = "DateTime")]
+            date_time: Option<&'a NaiveDateTime>,
+            quantity: Option<Decimal>,
+            proceeds: Option<Decimal>,
+            #[serde(rename = "Buy/Sell")]
+            transaction_type: Option<&'a TransactionType>,
+            #[serde(rename = "Proceeds (EUR)")]
+            proceeds_eur: Option<Decimal>,
+            #[serde(rename = "Report date")]
+            report_date: Option<NaiveDate>,
+            #[serde(rename = "Shares on date (taxable)")]
+            correction_shares: Option<Decimal>,
+            #[serde(rename = "Correction/share (EUR)")]
+            correction_per_share_eur: Option<Decimal>,
+            total_quantity: Decimal,
+            total_basis_eur: Decimal,
+            net_gain_eur: Option<Decimal>,
+        }
+
+        match &self.transaction {
+            Transaction::Trade(trade) => Row {
+                currency: Some(&trade.original_trade.currency),
+                symbol: Some(&trade.original_trade.symbol),
+                isin: &trade.original_trade.isin,
+                date_time: Some(&trade.original_trade.date_time),
+                quantity: Some(trade.original_trade.quantity),
+                proceeds: Some(trade.original_trade.proceeds),
+                transaction_type: Some(&trade.original_trade.transaction_type),
+                proceeds_eur: Some(trade.proceeds_eur),
+                report_date: None,
+                correction_shares: None,
+                correction_per_share_eur: None,
+                total_quantity: self.total_quantity,
+                total_basis_eur: self.total_basis_eur,
+                net_gain_eur: self.net_gain_eur,
+            }
+            .serialize(serializer),
+            Transaction::MeldefondsCorrection(correction) => Row {
+                currency: None,
+                symbol: None,
+                isin: &correction.isin,
+                date_time: None,
+                quantity: None,
+                proceeds: None,
+                transaction_type: None,
+                proceeds_eur: None,
+                report_date: Some(correction.report_date),
+                correction_shares: Some(correction.shares_on_date_taxable),
+                correction_per_share_eur: Some(correction.correction_per_share_eur),
+                total_quantity: self.total_quantity,
+                total_basis_eur: self.total_basis_eur,
+                net_gain_eur: self.net_gain_eur,
+            }
+            .serialize(serializer),
+        }
+    }
 }
 
 #[derive(Debug, Error)]
