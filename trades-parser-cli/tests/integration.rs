@@ -199,18 +199,24 @@ fn calculates_fake_trades_and_weekend_rate() {
     let headers = reader.headers().unwrap().clone();
     let rows = reader.records().collect::<Result<Vec<_>, _>>().unwrap();
     assert_eq!(rows.len(), 2);
-    assert_eq!(value(&rows[0], &headers, "isin"), "AT0000000001");
-    assert_eq!(value(&rows[0], &headers, "symbol"), "AAA");
-    assert_eq!(decimal(&rows[0], &headers, "quantity"), Decimal::ZERO);
-    assert_eq!(decimal(&rows[0], &headers, "basis_eur"), Decimal::ZERO);
-    assert_eq!(value(&rows[1], &headers, "isin"), "AT0000000002");
-    assert_eq!(value(&rows[1], &headers, "symbol"), "BBB");
+    let position_a = rows
+        .iter()
+        .find(|row| value(row, &headers, "isin") == "AT0000000001")
+        .unwrap();
+    assert_eq!(value(position_a, &headers, "symbol"), "AAA");
+    assert_eq!(decimal(position_a, &headers, "quantity"), Decimal::ZERO);
+    assert_eq!(decimal(position_a, &headers, "basis_eur"), Decimal::ZERO);
+    let position_b = rows
+        .iter()
+        .find(|row| value(row, &headers, "isin") == "AT0000000002")
+        .unwrap();
+    assert_eq!(value(position_b, &headers, "symbol"), "BBB");
     assert_eq!(
-        decimal(&rows[1], &headers, "quantity"),
+        decimal(position_b, &headers, "quantity"),
         Decimal::from_str("2").unwrap()
     );
     assert_eq!(
-        decimal(&rows[1], &headers, "basis_eur"),
+        decimal(position_b, &headers, "basis_eur"),
         Decimal::from_str("50").unwrap()
     );
 

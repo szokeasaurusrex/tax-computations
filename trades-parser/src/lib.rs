@@ -7,6 +7,9 @@ use thiserror::Error;
 
 pub use self::types::{Currency, DetailedTradesRow, TransactionType};
 
+/// # Errors
+///
+/// Returns an error if the CSV file cannot be opened or read.
 pub fn read_csv<P>(path: P) -> Result<impl Iterator<Item = Result<DetailedTradesRow, Error>>, Error>
 where
     P: AsRef<Path>,

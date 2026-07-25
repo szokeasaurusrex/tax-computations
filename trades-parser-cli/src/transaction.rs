@@ -1,19 +1,9 @@
 use std::cmp::Ordering;
 
-use chrono::NaiveDate;
 use meldefonds_corrections_parser::MeldefondsCorrection;
 use serde::Serialize;
-use trades_parser::TransactionType;
 
 use crate::currency_conversion::TradeEur;
-
-/// The kind of event represented by a transaction.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum EventKind {
-    Buy,
-    Sale,
-    MeldefondsCorrection,
-}
 
 /// A transaction that may change the basis.
 #[derive(Debug, Serialize)]
@@ -39,23 +29,6 @@ impl Transaction {
         match self {
             Self::Trade(trade) => &trade.original_trade.isin,
             Self::MeldefondsCorrection(correction) => &correction.isin,
-        }
-    }
-
-    pub(crate) fn date(&self) -> NaiveDate {
-        match self {
-            Self::Trade(trade) => trade.original_trade.date_time.date(),
-            Self::MeldefondsCorrection(correction) => correction.report_date,
-        }
-    }
-
-    pub(crate) fn event_kind(&self) -> EventKind {
-        match self {
-            Self::Trade(trade) => match trade.original_trade.transaction_type {
-                TransactionType::Buy => EventKind::Buy,
-                TransactionType::Sell => EventKind::Sale,
-            },
-            Self::MeldefondsCorrection(_) => EventKind::MeldefondsCorrection,
         }
     }
 

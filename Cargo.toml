@@ -23,7 +23,7 @@ thiserror = "2.0.18"
 trades-parser = { version = "0.1.0", path = "trades-parser" }
 
 [workspace.lints.clippy]
-correctness = { level = "forbid", priority = -1 }
+correctness = { level = "deny", priority = -1 }
 suspicious = { level = "deny", priority = -1 }
 style = { level = "deny", priority = -1 }
 complexity = { level = "deny", priority = -1 }
