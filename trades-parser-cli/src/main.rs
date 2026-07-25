@@ -1,22 +1,21 @@
-use std::{error::Error, io, path::PathBuf};
+use std::{error::Error, path::PathBuf};
 
 use clap::Parser;
 
 #[derive(Debug, Parser)]
-#[command(about = "Deserialize a trades CSV and display its first row")]
+#[command(
+    about = "Calculate Austrian capital gains from cleaned trade and tax data; writes output under ./out"
+)]
 struct Args {
-    /// Path to the CSV file.
-    csv_path: PathBuf,
+    /// Directory containing cleaned trade CSV files.
+    trade_directory: PathBuf,
+    /// Path to the ECB USD/EUR rates CSV.
+    ecb_path: PathBuf,
+    /// Path to the Meldefonds corrections CSV.
+    meldefonds_path: PathBuf,
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
-    let rows = trades_parser::read_csv(args.csv_path)?.collect::<Result<Vec<_>, _>>()?;
-    let first_row = rows
-        .first()
-        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "CSV file contains no rows"))?;
-
-    println!("{first_row:?}");
-
-    Ok(())
+    trades_parser_cli::run(&args.trade_directory, &args.ecb_path, &args.meldefonds_path)
 }

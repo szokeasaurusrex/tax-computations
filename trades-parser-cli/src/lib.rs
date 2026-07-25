@@ -4,7 +4,9 @@ use thiserror::Error;
 use trades_parser::TransactionType;
 
 use crate::{
+    calculation::calculate,
     currency_conversion::{RateNotFound, RateTable, TradeEur},
+    output::{PositionRow, write_outputs},
     transaction::Transaction,
 };
 
@@ -85,6 +87,54 @@ mod calculation;
 mod currency_conversion;
 mod output;
 mod transaction;
+
+/// Run the complete calculation and write both output files.
+///
+/// # Errors
+///
+/// Returns an error when input loading, calculation, or output writing fails.
+pub fn run(
+    trade_directory: &Path,
+    ecb_path: &Path,
+    meldefonds_path: &Path,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let transactions = load_transactions(trade_directory, ecb_path, meldefonds_path)?;
+    let groups = split_by_isin(transactions)
+        .into_iter()
+        .map(
+            |(isin, transactions)| -> Result<_, Box<dyn std::error::Error>> {
+                let calculated = calculate(transactions)?;
+                let (quantity, basis_eur) = calculated
+                    .last()
+                    .map(|event| (event.total_quantity, event.total_basis_eur))
+                    .ok_or_else(|| std::io::Error::other("ISIN has no transactions"))?;
+                let symbol = calculated
+                    .iter()
+                    .rev()
+                    .find_map(|event| match &event.transaction {
+                        Transaction::Trade(trade) => Some(trade.original_trade.symbol.clone()),
+                        Transaction::MeldefondsCorrection(_) => None,
+                    });
+
+                Ok((
+                    calculated,
+                    PositionRow {
+                        isin,
+                        symbol: symbol.unwrap_or_default(),
+                        quantity,
+                        basis_eur,
+                    },
+                ))
+            },
+        )
+        .collect::<Result<Vec<_>, _>>()?;
+    let (event_groups, positions): (Vec<_>, Vec<_>) = groups.into_iter().unzip();
+    let mut events = event_groups.into_iter().flatten().collect::<Vec<_>>();
+
+    events.sort_by(|left, right| left.transaction.cmp_chronological(&right.transaction));
+    write_outputs(&events, &positions)?;
+    Ok(())
+}
 
 /// Split a list of transactions into a map keyed by their ISIN.
 ///
