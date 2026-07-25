@@ -92,8 +92,15 @@ impl Serialize for CalculatedTransaction {
 pub(crate) enum CalculationError {
     #[error("correction has no position")]
     CorrectionWithoutPosition,
-    #[error("correction quantity does not match position")]
-    CorrectionQuantityMismatch,
+    #[error(
+        "correction quantity mismatch for {isin} on {report_date}: expected position quantity {expected}, actual correction quantity {actual}"
+    )]
+    CorrectionQuantityMismatch {
+        isin: String,
+        report_date: NaiveDate,
+        expected: Decimal,
+        actual: Decimal,
+    },
 }
 
 pub(crate) fn calculate(
@@ -133,7 +140,12 @@ pub(crate) fn calculate(
                     if (total_quantity - correction.shares_on_date_taxable).abs()
                         > Decimal::new(1, 2)
                     {
-                        return Err(CalculationError::CorrectionQuantityMismatch);
+                        return Err(CalculationError::CorrectionQuantityMismatch {
+                            isin: correction.isin.clone(),
+                            report_date: correction.report_date,
+                            expected: total_quantity,
+                            actual: correction.shares_on_date_taxable,
+                        });
                     }
 
                     total_basis_eur +=
