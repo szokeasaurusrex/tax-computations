@@ -13,9 +13,16 @@ struct Args {
     ecb_path: PathBuf,
     /// Path to the Meldefonds corrections CSV.
     meldefonds_path: PathBuf,
+    /// Directory containing corporate-action CSV files.
+    corporate_actions_directory: PathBuf,
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
-    trades_parser_cli::run(&args.trade_directory, &args.ecb_path, &args.meldefonds_path)
+    trades_parser_cli::run(
+        &args.trade_directory,
+        &args.ecb_path,
+        &args.meldefonds_path,
+        &args.corporate_actions_directory,
+    )
 }

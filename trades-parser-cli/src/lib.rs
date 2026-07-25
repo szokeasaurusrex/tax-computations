@@ -20,6 +20,8 @@ pub(crate) enum InputError {
     Trades(#[from] trades_parser::Error),
     #[error("failed to read Meldefonds corrections: {0}")]
     Meldefonds(#[from] meldefonds_corrections_parser::Error),
+    #[error("failed to read corporate actions: {0}")]
+    CorporateActions(#[from] corporate_actions_parser::Error),
     #[error("exchange rate not found: {0}")]
     RateNotFound(#[from] RateNotFound),
     #[error("invalid quantity or proceeds signs for {isin} {symbol}")]
@@ -57,6 +59,7 @@ pub(crate) fn load_transactions(
     trade_directory: &Path,
     ecb_path: &Path,
     meldefonds_path: &Path,
+    corporate_actions_directory: &Path,
 ) -> Result<Vec<Transaction>, InputError> {
     let rates = RateTable::try_from_rates(ecb_data_parser::read_csv(ecb_path)?)?;
     let mut transactions = fs::read_dir(trade_directory)?
@@ -79,6 +82,18 @@ pub(crate) fn load_transactions(
             .collect::<Result<Vec<_>, _>>()?,
     );
 
+    for entry in fs::read_dir(corporate_actions_directory)? {
+        let path = entry?.path();
+        if path.extension().is_none_or(|extension| extension != "csv") {
+            continue;
+        }
+        transactions.extend(
+            corporate_actions_parser::read_csv(path.clone())?
+                .map(|action| action.map(Transaction::from))
+                .collect::<Result<Vec<_>, _>>()?,
+        );
+    }
+
     transactions.sort_by(Transaction::cmp_chronological);
     Ok(transactions)
 }
@@ -97,8 +112,14 @@ pub fn run(
     trade_directory: &Path,
     ecb_path: &Path,
     meldefonds_path: &Path,
+    corporate_actions_directory: &Path,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let transactions = load_transactions(trade_directory, ecb_path, meldefonds_path)?;
+    let transactions = load_transactions(
+        trade_directory,
+        ecb_path,
+        meldefonds_path,
+        corporate_actions_directory,
+    )?;
     let groups = split_by_isin(transactions)
         .into_iter()
         .map(

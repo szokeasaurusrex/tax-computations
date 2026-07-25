@@ -29,6 +29,13 @@ fn write_inputs(root: &Path, corrections: &str) {
     fs::copy(fixtures.join("ecb.csv"), root.join("ecb.csv")).expect("copy fake ECB rates");
     fs::copy(fixtures.join(corrections), root.join("corrections.csv"))
         .expect("copy fake corrections");
+    let corporate_actions = root.join("corporate-actions");
+    fs::create_dir_all(&corporate_actions).expect("create corporate-action directory");
+    fs::copy(
+        fixtures.join("corporate-actions.csv"),
+        corporate_actions.join("corporate-actions.csv"),
+    )
+    .expect("copy fake corporate actions");
 }
 
 fn run(root: &Path) -> std::process::Output {
@@ -37,6 +44,7 @@ fn run(root: &Path) -> std::process::Output {
             root.join("trades"),
             root.join("ecb.csv"),
             root.join("corrections.csv"),
+            root.join("corporate-actions"),
         ])
         .current_dir(root)
         .output()
@@ -179,6 +187,16 @@ fn calculates_fake_trades_and_weekend_rate() {
             net_gain_eur: None,
         },
         EventExpectation {
+            isin: "AT0000000002",
+            symbol: "",
+            quantity: Some("3"),
+            proceeds: None,
+            proceeds_eur: None,
+            total_quantity: "5",
+            total_basis_eur: "50",
+            net_gain_eur: None,
+        },
+        EventExpectation {
             isin: "AT0000000001",
             symbol: "AAA",
             quantity: Some("-9"),
@@ -213,7 +231,7 @@ fn calculates_fake_trades_and_weekend_rate() {
     assert_eq!(value(position_b, &headers, "symbol"), "BBB");
     assert_eq!(
         decimal(position_b, &headers, "quantity"),
-        Decimal::from_str("2").unwrap()
+        Decimal::from_str("5").unwrap()
     );
     assert_eq!(
         decimal(position_b, &headers, "basis_eur"),
