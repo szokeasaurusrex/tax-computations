@@ -1,0 +1,14 @@
+[package]
+name = "corporate-actions-parser"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+chrono.workspace = true
+csv.workspace = true
+rust_decimal.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true
