@@ -29,5 +29,5 @@ style = { level = "deny", priority = -1 }
 complexity = { level = "deny", priority = -1 }
 perf = { level = "deny", priority = -1 }
 pedantic = { level = "warn", priority = -1 }
-allow_attributes = { level = "deny", priority = -1 }
+allow_attributes = { level = "deny" }
 must_use_candidate = "allow"

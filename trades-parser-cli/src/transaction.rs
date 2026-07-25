@@ -22,7 +22,7 @@ impl From<MeldefondsCorrection> for Transaction {
 }
 
 impl Transaction {
-    pub(crate) fn isin(&self) -> &str {
+    pub fn isin(&self) -> &str {
         match self {
             Self::Trade(trade) => &trade.original_trade.isin,
             Self::MeldefondsCorrection(correction) => &correction.isin,
