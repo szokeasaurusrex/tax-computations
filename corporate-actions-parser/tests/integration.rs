@@ -15,7 +15,7 @@ fn parses_effective_date_and_quantity() {
     assert_eq!(
         actions,
         vec![corporate_actions_parser::CorporateAction {
-            isin: "US4642875078".to_owned(),
+            isin: "AT0000000003".to_owned(),
             effective_date: NaiveDate::from_ymd_opt(2024, 2, 21).unwrap(),
             quantity: Decimal::from(42),
         }]
