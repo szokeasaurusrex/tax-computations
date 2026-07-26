@@ -134,7 +134,17 @@ fn calculates_fake_trades_and_weekend_rate() {
     let events = fs::read_to_string(root.join("out/events.csv")).expect("read events");
     let mut reader = csv::Reader::from_reader(events.as_bytes());
     let headers = reader.headers().unwrap().clone();
+    assert_eq!(headers.get(0), Some("Transaction type"));
     let rows = reader.records().collect::<Result<Vec<_>, _>>().unwrap();
+    assert_eq!(value(&rows[0], &headers, "Transaction type"), "Trade");
+    assert_eq!(
+        value(&rows[4], &headers, "Transaction type"),
+        "Meldefonds Correction"
+    );
+    assert_eq!(
+        value(&rows[5], &headers, "Transaction type"),
+        "Corporate Action"
+    );
     let expected = [
         EventExpectation {
             isin: "AT0000000001",

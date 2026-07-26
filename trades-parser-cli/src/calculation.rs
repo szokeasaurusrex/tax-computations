@@ -25,6 +25,8 @@ impl Serialize for CalculatedTransaction {
     {
         #[derive(Serialize)]
         struct Row<'a> {
+            #[serde(rename = "Transaction type")]
+            event_type: &'static str,
             #[serde(rename = "CurrencyPrimary")]
             currency: Option<&'a trades_parser::Currency>,
             symbol: Option<&'a str>,
@@ -53,6 +55,7 @@ impl Serialize for CalculatedTransaction {
 
         match &self.transaction {
             Transaction::Trade(trade) => Row {
+                event_type: "Trade",
                 currency: Some(&trade.original_trade.currency),
                 symbol: Some(&trade.original_trade.symbol),
                 isin: &trade.original_trade.isin,
@@ -71,6 +74,7 @@ impl Serialize for CalculatedTransaction {
             }
             .serialize(serializer),
             Transaction::MeldefondsCorrection(correction) => Row {
+                event_type: "Meldefonds Correction",
                 currency: None,
                 symbol: None,
                 isin: &correction.isin,
@@ -89,6 +93,7 @@ impl Serialize for CalculatedTransaction {
             }
             .serialize(serializer),
             Transaction::CorporateAction(action) => Row {
+                event_type: "Corporate Action",
                 currency: None,
                 symbol: None,
                 isin: &action.isin,
