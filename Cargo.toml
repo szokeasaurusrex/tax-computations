@@ -3,6 +3,7 @@ resolver = "3"
 members = ["corporate-actions-parser",
     "ecb-data-parser",
     "meldefonds-corrections-parser",
+    "opening-positions-parser",
     "trades-parser",
     "trades-parser-cli",
 ]
@@ -18,6 +19,7 @@ corporate-actions-parser = { version = "0.1.0", path = "corporate-actions-parser
 csv = "1.4.0"
 ecb-data-parser = { version = "0.1.0", path = "ecb-data-parser" }
 meldefonds-corrections-parser = { version = "0.1.0", path = "meldefonds-corrections-parser" }
+opening-positions-parser = { version = "0.1.0", path = "opening-positions-parser" }
 rust_decimal = "1.42.1"
 serde = { version = "1.0.228", features = ["derive"] }
 thiserror = "2.0.18"

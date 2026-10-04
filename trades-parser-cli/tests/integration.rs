@@ -18,6 +18,8 @@ fn temp_directory(name: &str) -> PathBuf {
 }
 
 fn write_inputs(root: &Path, corrections: &str) {
+    fs::write(root.join("opening.csv"), "isin,symbol,quantity,basis_eur\n")
+        .expect("write empty opening positions");
     let fixtures = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures");
     let trades = root.join("trades");
     fs::create_dir_all(&trades).expect("create trade directory");
@@ -41,6 +43,7 @@ fn write_inputs(root: &Path, corrections: &str) {
 fn run(root: &Path) -> std::process::Output {
     Command::new(env!("CARGO_BIN_EXE_trades-parser-cli"))
         .args([
+            root.join("opening.csv"),
             root.join("trades"),
             root.join("ecb.csv"),
             root.join("corrections.csv"),
@@ -249,6 +252,147 @@ fn calculates_fake_trades_and_weekend_rate() {
     );
 
     fs::remove_dir_all(root).expect("remove temporary directory");
+}
+
+#[test]
+fn continues_from_generated_positions() {
+    let previous = temp_directory("previous-year");
+    write_inputs(&previous, "corrections-valid.csv");
+    assert!(run(&previous).status.success());
+
+    let root = temp_directory("next-year");
+    write_inputs(&root, "corrections-valid.csv");
+    fs::copy(previous.join("out/positions.csv"), root.join("opening.csv")).unwrap();
+    fs::write(
+        root.join("trades/fake-trades.csv"),
+        "CurrencyPrimary,Symbol,ISIN,DateTime,Quantity,Proceeds,Buy/Sell\n",
+    )
+    .unwrap();
+    fs::write(
+        root.join("corporate-actions/corporate-actions.csv"),
+        "ISIN,Date/Time,Quantity\n",
+    )
+    .unwrap();
+    fs::write(
+        root.join("corrections.csv"),
+        "ISIN,Report date,Shares on date (taxable),Correction/share (EUR)\n",
+    )
+    .unwrap();
+    fs::write(
+        root.join("ecb.csv"),
+        "DATE,US dollar/Euro ECB reference exchange rate (EXR.D.USD.EUR.SP00.A)\n2027-07-20,2\n",
+    )
+    .unwrap();
+    let output = run(&root);
+    assert!(output.status.success(), "CLI failed: {output:?}");
+    let read_positions = |path| {
+        let mut positions = opening_positions_parser::read_csv(path)
+            .unwrap()
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap();
+        positions.sort_by(|a, b| a.isin.cmp(&b.isin));
+        positions
+    };
+    let previous_positions = read_positions(previous.join("out/positions.csv"));
+    assert_eq!(
+        read_positions(root.join("out/positions.csv")),
+        previous_positions,
+    );
+
+    fs::write(
+        root.join("corrections.csv"),
+        "ISIN,Report date,Shares on date (taxable),Correction/share (EUR)\nAT0000000002,2027-07-19,5,2\n",
+    )
+    .unwrap();
+    fs::write(
+        root.join("trades/fake-trades.csv"),
+        "CurrencyPrimary,Symbol,ISIN,DateTime,Quantity,Proceeds,Buy/Sell\nUSD,BBB,AT0000000002,2027-07-20 09:00:00 UTC,-2,80,SELL\n",
+    )
+    .unwrap();
+    let output = run(&root);
+    assert!(output.status.success(), "CLI failed: {output:?}");
+    let mut reader = csv::Reader::from_path(root.join("out/events.csv")).unwrap();
+    let headers = reader.headers().unwrap().clone();
+    let rows = reader.records().collect::<Result<Vec<_>, _>>().unwrap();
+    assert_eq!(rows.len(), 4);
+    for row in &rows[..2] {
+        assert_eq!(value(row, &headers, "Transaction type"), "Opening Position");
+        let position = previous_positions
+            .iter()
+            .find(|position| position.isin == value(row, &headers, "ISIN"))
+            .unwrap();
+        assert_eq!(value(row, &headers, "symbol"), position.symbol);
+        assert_eq!(decimal(row, &headers, "quantity"), position.quantity);
+        assert_eq!(decimal(row, &headers, "total_quantity"), position.quantity);
+        assert_eq!(
+            decimal(row, &headers, "total_basis_eur"),
+            position.basis_eur
+        );
+        for column in [
+            "CurrencyPrimary",
+            "DateTime",
+            "proceeds",
+            "Buy/Sell",
+            "Proceeds (EUR)",
+            "Report date",
+            "Corporate action date",
+            "Shares on date (taxable)",
+            "Correction/share (EUR)",
+            "net_gain_eur",
+        ] {
+            assert_eq!(value(row, &headers, column), "");
+        }
+    }
+    assert_eq!(
+        value(&rows[2], &headers, "Transaction type"),
+        "Meldefonds Correction"
+    );
+    assert_eq!(value(&rows[3], &headers, "Transaction type"), "Trade");
+    assert_eq!(
+        decimal(&rows[2], &headers, "total_basis_eur"),
+        Decimal::from(60)
+    );
+    assert_eq!(
+        decimal(&rows[3], &headers, "total_quantity"),
+        Decimal::from(3)
+    );
+    assert_eq!(
+        decimal(&rows[3], &headers, "total_basis_eur"),
+        Decimal::from(36)
+    );
+    assert_eq!(
+        decimal(&rows[3], &headers, "net_gain_eur"),
+        Decimal::from(16)
+    );
+    let positions = read_positions(root.join("out/positions.csv"));
+    assert_eq!(positions.len(), 2);
+    assert_eq!(positions[0].quantity, Decimal::ZERO);
+    assert_eq!(positions[1].quantity, Decimal::from(3));
+    assert_eq!(positions[1].basis_eur, Decimal::from(36));
+
+    fs::remove_dir_all(previous).unwrap();
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn rejects_invalid_opening_positions() {
+    let root = temp_directory("invalid-opening");
+    write_inputs(&root, "corrections-valid.csv");
+    fs::write(
+        root.join("opening.csv"),
+        "isin,symbol,quantity,basis_eur\nAT0000000002,BBB,0,50\n",
+    )
+    .unwrap();
+    let output = run(&root);
+    assert!(
+        !output.status.success(),
+        "CLI unexpectedly succeeded: {output:?}"
+    );
+    assert!(
+        String::from_utf8_lossy(&output.stderr).contains("InvalidPosition"),
+        "unexpected error: {output:?}",
+    );
+    fs::remove_dir_all(root).unwrap();
 }
 
 #[test]

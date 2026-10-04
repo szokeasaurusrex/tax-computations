@@ -4,12 +4,14 @@ use chrono::{NaiveDate, NaiveDateTime};
 
 use corporate_actions_parser::CorporateAction;
 use meldefonds_corrections_parser::MeldefondsCorrection;
+use opening_positions_parser::OpeningPosition;
 use serde::Serialize;
 
 use crate::currency_conversion::TradeEur;
 
 #[derive(Debug, PartialEq, Eq)]
 enum DateTime {
+    Opening,
     Exact(NaiveDateTime),
     EndOfDay(NaiveDate),
 }
@@ -17,6 +19,9 @@ enum DateTime {
 impl Ord for DateTime {
     fn cmp(&self, other: &Self) -> Ordering {
         match (self, other) {
+            (Self::Opening, Self::Opening) => Ordering::Equal,
+            (Self::Opening, _) => Ordering::Less,
+            (_, Self::Opening) => Ordering::Greater,
             (Self::Exact(left), Self::Exact(right)) => left.cmp(right),
             (Self::Exact(left), Self::EndOfDay(right)) => {
                 left.date().cmp(right).then(Ordering::Less)
@@ -38,9 +43,16 @@ impl PartialOrd for DateTime {
 /// A transaction that may change the basis.
 #[derive(Debug, Serialize)]
 pub(crate) enum Transaction {
+    OpeningPosition(OpeningPosition),
     Trade(TradeEur),
     MeldefondsCorrection(MeldefondsCorrection),
     CorporateAction(CorporateAction),
+}
+
+impl From<OpeningPosition> for Transaction {
+    fn from(position: OpeningPosition) -> Self {
+        Self::OpeningPosition(position)
+    }
 }
 
 impl From<TradeEur> for Transaction {
@@ -64,6 +76,7 @@ impl From<CorporateAction> for Transaction {
 impl Transaction {
     pub(crate) fn isin(&self) -> &str {
         match self {
+            Self::OpeningPosition(position) => &position.isin,
             Self::Trade(trade) => &trade.original_trade.isin,
             Self::MeldefondsCorrection(correction) => &correction.isin,
             Self::CorporateAction(action) => &action.isin,
@@ -72,6 +85,7 @@ impl Transaction {
 
     fn date_time(&self) -> DateTime {
         match self {
+            Self::OpeningPosition(_) => DateTime::Opening,
             Self::Trade(trade) => DateTime::Exact(trade.original_trade.date_time),
             Self::MeldefondsCorrection(correction) => DateTime::EndOfDay(correction.report_date),
             Self::CorporateAction(action) => DateTime::EndOfDay(action.effective_date),

@@ -18,43 +18,62 @@ pub(crate) struct CalculatedTransaction {
     pub(crate) net_gain_eur: Option<Decimal>,
 }
 
+#[derive(Serialize)]
+struct EventRow<'a> {
+    #[serde(rename = "Transaction type")]
+    event_type: &'static str,
+    #[serde(rename = "CurrencyPrimary")]
+    currency: Option<&'a trades_parser::Currency>,
+    symbol: Option<&'a str>,
+    #[serde(rename = "ISIN")]
+    isin: &'a str,
+    #[serde(rename = "DateTime")]
+    date_time: Option<&'a NaiveDateTime>,
+    quantity: Option<Decimal>,
+    proceeds: Option<Decimal>,
+    #[serde(rename = "Buy/Sell")]
+    transaction_type: Option<&'a TransactionType>,
+    #[serde(rename = "Proceeds (EUR)")]
+    proceeds_eur: Option<Decimal>,
+    #[serde(rename = "Report date")]
+    report_date: Option<NaiveDate>,
+    #[serde(rename = "Corporate action date")]
+    corporate_action_date: Option<NaiveDate>,
+    #[serde(rename = "Shares on date (taxable)")]
+    correction_shares: Option<Decimal>,
+    #[serde(rename = "Correction/share (EUR)")]
+    correction_per_share_eur: Option<Decimal>,
+    total_quantity: Decimal,
+    total_basis_eur: Decimal,
+    net_gain_eur: Option<Decimal>,
+}
+
 impl Serialize for CalculatedTransaction {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
-        #[derive(Serialize)]
-        struct Row<'a> {
-            #[serde(rename = "Transaction type")]
-            event_type: &'static str,
-            #[serde(rename = "CurrencyPrimary")]
-            currency: Option<&'a trades_parser::Currency>,
-            symbol: Option<&'a str>,
-            #[serde(rename = "ISIN")]
-            isin: &'a str,
-            #[serde(rename = "DateTime")]
-            date_time: Option<&'a NaiveDateTime>,
-            quantity: Option<Decimal>,
-            proceeds: Option<Decimal>,
-            #[serde(rename = "Buy/Sell")]
-            transaction_type: Option<&'a TransactionType>,
-            #[serde(rename = "Proceeds (EUR)")]
-            proceeds_eur: Option<Decimal>,
-            #[serde(rename = "Report date")]
-            report_date: Option<NaiveDate>,
-            #[serde(rename = "Corporate action date")]
-            corporate_action_date: Option<NaiveDate>,
-            #[serde(rename = "Shares on date (taxable)")]
-            correction_shares: Option<Decimal>,
-            #[serde(rename = "Correction/share (EUR)")]
-            correction_per_share_eur: Option<Decimal>,
-            total_quantity: Decimal,
-            total_basis_eur: Decimal,
-            net_gain_eur: Option<Decimal>,
-        }
-
         match &self.transaction {
-            Transaction::Trade(trade) => Row {
+            Transaction::OpeningPosition(position) => EventRow {
+                event_type: "Opening Position",
+                currency: None,
+                symbol: Some(&position.symbol),
+                isin: &position.isin,
+                date_time: None,
+                quantity: Some(position.quantity),
+                proceeds: None,
+                transaction_type: None,
+                proceeds_eur: None,
+                report_date: None,
+                corporate_action_date: None,
+                correction_shares: None,
+                correction_per_share_eur: None,
+                total_quantity: self.total_quantity,
+                total_basis_eur: self.total_basis_eur,
+                net_gain_eur: None,
+            }
+            .serialize(serializer),
+            Transaction::Trade(trade) => EventRow {
                 event_type: "Trade",
                 currency: Some(&trade.original_trade.currency),
                 symbol: Some(&trade.original_trade.symbol),
@@ -73,7 +92,7 @@ impl Serialize for CalculatedTransaction {
                 net_gain_eur: self.net_gain_eur,
             }
             .serialize(serializer),
-            Transaction::MeldefondsCorrection(correction) => Row {
+            Transaction::MeldefondsCorrection(correction) => EventRow {
                 event_type: "Meldefonds Correction",
                 currency: None,
                 symbol: None,
@@ -92,7 +111,7 @@ impl Serialize for CalculatedTransaction {
                 net_gain_eur: self.net_gain_eur,
             }
             .serialize(serializer),
-            Transaction::CorporateAction(action) => Row {
+            Transaction::CorporateAction(action) => EventRow {
                 event_type: "Corporate Action",
                 currency: None,
                 symbol: None,
@@ -139,6 +158,11 @@ pub(crate) fn calculate(
         .into_iter()
         .map(|transaction| {
             let net_gain_eur = match &transaction {
+                Transaction::OpeningPosition(position) => {
+                    total_quantity = position.quantity;
+                    total_basis_eur = position.basis_eur;
+                    None
+                }
                 Transaction::Trade(trade) => match &trade.original_trade.transaction_type {
                     TransactionType::Buy => {
                         total_quantity += trade.original_trade.quantity;

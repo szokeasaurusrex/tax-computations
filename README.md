@@ -9,6 +9,7 @@ I built this Rust CLI to help prepare my Austrian tax return from my brokerage d
 
 The CLI processes events chronologically, separately for each ISIN, and produces an auditable moving-average basis and realized-gain ledger.
 
+- Opening positions initialize quantity and EUR basis before dated events.
 - Purchases increase quantity and EUR basis.
 - Sales remove proportional moving-average basis and calculate realized gain or loss.
 - Meldefonds corrections change basis without changing quantity.
@@ -18,16 +19,17 @@ The implementation is experimental and intentionally narrow. It is not a general
 
 ## Usage
 
-The CLI takes four positional paths:
+The CLI takes five required positional paths, starting with the opening positions CSV:
 
 ```text
-cargo run -- <trade-directory> <ecb-rates.csv> <meldefonds-corrections.csv> <corporate-actions-directory>
+cargo run -- <opening-positions.csv> <trade-directory> <ecb-rates.csv> <meldefonds-corrections.csv> <corporate-actions-directory>
 ```
 
 Example:
 
 ```text
 cargo run -- \
+  data/opening-positions.csv \
   data/statements \
   data/ecb-rates.csv \
   data/meldefonds-corrections.csv \
@@ -41,6 +43,29 @@ It writes:
 
 The `out/` directory is ignored by Git.
 
+### Continue from a previous year
+
+Use the previous year's `out/positions.csv` unchanged as the first argument:
+
+```text
+cargo run -- \
+  data/previous-year/positions.csv \
+  data/current-year/trades \
+  data/ecb-rates.csv \
+  data/current-year/meldefonds-corrections.csv \
+  data/current-year/corporate_actions
+```
+
+Opening balances use the columns `isin,symbol,quantity,basis_eur`. Each ISIN may occur only once. Quantities must be nonnegative, and zero quantity requires zero basis. Closed positions from previous output are accepted. To start from zero, supply a file containing only this header:
+
+```csv
+isin,symbol,quantity,basis_eur
+```
+
+Opening positions are ledger events ordered before all dated events. No date filtering is performed: include only trades, corrections, and corporate actions after the opening snapshot to avoid double-counting. ISINs missing from the opening file start at zero. Positions without new activity remain in the position output, with their original symbols; a new trade supplies the latest symbol.
+
+Save the previous output as a separate input file: every run overwrites `out/positions.csv` and `out/events.csv`.
+
 ## Inputs
 
 The trade directory contains cleaned CSV files with `CurrencyPrimary`, `Symbol`, `ISIN`, `DateTime`, `Quantity`, `Proceeds`, and `Buy/Sell`. Only CSV files directly inside the directory are read. The current implementation supports USD trades. Buys use positive quantity and negative proceeds; sales use negative quantity and positive proceeds.
@@ -53,7 +78,9 @@ Corporate-action CSVs provide `ISIN`, `Date/Time` in `YYYY-MM-DD` format, and `Q
 
 ## Output
 
-The first column of `out/events.csv` is `Transaction type`, with values `Trade`, `Meldefonds Correction`, or `Corporate Action`. The ledger includes source values, quantities, proceeds, EUR proceeds, total quantity, total EUR basis, and realized gain where applicable.
+The first column of `out/events.csv` is `Transaction type`, with values `Opening Position`, `Trade`, `Meldefonds Correction`, or `Corporate Action`. The ledger includes source values, quantities, proceeds, EUR proceeds, total quantity, total EUR basis, and realized gain where applicable.
+
+Opening rows retain the ISIN, symbol, and quantity; `total_basis_eur` contains the supplied opening basis. Dates, currency, proceeds, buy/sell, and realized gain are empty. Opening positions are not purchases and do not require exchange-rate conversion. The CSV columns are unchanged; `Opening Position` is an additional event type.
 
 `out/positions.csv` contains the final ISIN, symbol, quantity, and EUR basis. These files are calculation output, not tax forms.
 
@@ -66,7 +93,7 @@ cargo clippy --workspace --all-features
 cargo check --workspace --all-targets --all-features
 ```
 
-The main components are [`trades-parser`](trades-parser), [`ecb-data-parser`](ecb-data-parser), [`meldefonds-corrections-parser`](meldefonds-corrections-parser), [`corporate-actions-parser`](corporate-actions-parser), and [`trades-parser-cli`](trades-parser-cli).
+The input parsers are [`trades-parser`](trades-parser), [`ecb-data-parser`](ecb-data-parser), [`meldefonds-corrections-parser`](meldefonds-corrections-parser), [`corporate-actions-parser`](corporate-actions-parser), and [`opening-positions-parser`](opening-positions-parser). Each exposes input values through `read_csv`. The opening-positions parser also validates balances and rejects duplicate ISINs. The [`trades-parser-cli`](trades-parser-cli) crate applies transaction validation, calculates one ISIN at a time, and serializes output separately.
 
 ## Limitations
 

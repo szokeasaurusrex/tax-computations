@@ -7,6 +7,8 @@ use clap::Parser;
     about = "Calculate Austrian capital gains from cleaned trade and tax data; writes output under ./out"
 )]
 struct Args {
+    /// Opening positions CSV, applied before all supplied events.
+    opening_positions_path: PathBuf,
     /// Directory containing cleaned trade CSV files.
     trade_directory: PathBuf,
     /// Path to the ECB USD/EUR rates CSV.
@@ -20,6 +22,7 @@ struct Args {
 fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
     trades_parser_cli::run(
+        &args.opening_positions_path,
         &args.trade_directory,
         &args.ecb_path,
         &args.meldefonds_path,

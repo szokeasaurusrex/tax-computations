@@ -26,6 +26,8 @@ pub(crate) enum InputError {
     RateNotFound(#[from] RateNotFound),
     #[error("invalid quantity or proceeds signs for {isin} {symbol}")]
     InvalidTradeSigns { isin: String, symbol: String },
+    #[error("failed to read opening positions: {0}")]
+    OpeningPositions(#[from] opening_positions_parser::Error),
 }
 
 fn read_trade_file(path: &Path, rates: &RateTable) -> Result<Vec<Transaction>, InputError> {
@@ -56,6 +58,7 @@ fn read_trade_file(path: &Path, rates: &RateTable) -> Result<Vec<Transaction>, I
 
 /// Read, convert, validate, and chronologically order all input transactions.
 pub(crate) fn load_transactions(
+    opening_positions_path: &Path,
     trade_directory: &Path,
     ecb_path: &Path,
     meldefonds_path: &Path,
@@ -76,6 +79,11 @@ pub(crate) fn load_transactions(
             Ok::<_, InputError>(transactions)
         })?;
 
+    transactions.extend(
+        opening_positions_parser::read_csv(opening_positions_path)?
+            .map(|position| position.map(Transaction::from))
+            .collect::<Result<Vec<_>, _>>()?,
+    );
     transactions.extend(
         meldefonds_corrections_parser::read_csv(meldefonds_path)?
             .map(|correction| correction.map(Transaction::from))
@@ -103,18 +111,22 @@ mod currency_conversion;
 mod output;
 mod transaction;
 
-/// Run the complete calculation and write both output files.
+/// Run from opening positions and write both output files.
+///
+/// Opening balances apply before all supplied events; no date filtering is performed.
 ///
 /// # Errors
 ///
 /// Returns an error when input loading, calculation, or output writing fails.
 pub fn run(
+    opening_positions_path: &Path,
     trade_directory: &Path,
     ecb_path: &Path,
     meldefonds_path: &Path,
     corporate_actions_directory: &Path,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let transactions = load_transactions(
+        opening_positions_path,
         trade_directory,
         ecb_path,
         meldefonds_path,
@@ -133,6 +145,7 @@ pub fn run(
                     .iter()
                     .rev()
                     .find_map(|event| match &event.transaction {
+                        Transaction::OpeningPosition(position) => Some(position.symbol.clone()),
                         Transaction::Trade(trade) => Some(trade.original_trade.symbol.clone()),
                         Transaction::MeldefondsCorrection(_) | Transaction::CorporateAction(_) => {
                             None
